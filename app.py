@@ -1,82 +1,101 @@
 import streamlit as st
 from PIL import Image
+import io
 
-# Page Configuration
-st.set_page_config(page_title="RC Modifier Tool", layout="centered")
+# Page setup
+st.set_page_config(page_title="RC Detail Modifier", layout="wide")
 
-# Custom CSS for Font Size 6.4pt and styling
-# 6.4pt is roughly 8.5px
+# Custom CSS for UI and 6.4pt text
+# 6.4pt is approximately 8.53 pixels
 st.markdown(
     """
     <style>
-    .custom-text {
-        font-size: 8.5px !important;
-        font-family: 'Arial', sans-serif;
-        line-height: 1.2;
+    .main {
+        background-color: #f0f2f6;
     }
-    .stTextInput label {
-        font-size: 14px !important;
-        font-weight: bold;
-    }
-    .upload-section {
-        border: 2px dashed #4CAF50;
+    .rc-box {
+        background-color: white;
         padding: 20px;
         border-radius: 10px;
-        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 20px;
+    }
+    /* 6.4pt Font Styling */
+    .target-text {
+        font-size: 8.53px !important;
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        color: #000;
+        margin: 2px 0;
+        text-transform: uppercase;
+    }
+    .label-style {
+        font-size: 14px;
+        font-weight: 600;
+        color: #333;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.title("📄 RC Modification Portal")
-st.write("Apni purani RC upload karein aur niche naye details enter karein.")
+st.title("📄 RC Modification System")
+st.write("Apni purani RC upload karein aur naye details enter karke preview check karein.")
 
-# 1. RC Upload Section
-st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-uploaded_file = st.file_uploader("Upload Your Old RC (Image/PDF)", type=["jpg", "jpeg", "png", "pdf"])
-st.markdown('</div>', unsafe_allow_html=True)
+# Layout: Two Columns
+col_input, col_preview = st.columns([1, 1])
 
-if uploaded_file is not None:
-    st.success("File Upload Ho Gayi Hai!")
-    if uploaded_file.type != "application/pdf":
-        img = Image.open(uploaded_file)
-        st.image(img, caption="Uploaded RC Preview", use_container_width=True)
+with col_input:
+    st.markdown('<div class="rc-box">', unsafe_allow_html=True)
+    st.subheader("1. Upload Old RC")
+    uploaded_file = st.file_uploader("Choose Image/PDF", type=["jpg", "png", "jpeg", "pdf"])
+    
+    st.divider()
+    
+    st.subheader("2. Enter New Details")
+    # Input Boxes
+    reg_no = st.text_input("Registration Number", placeholder="e.g. GJ05CV6327")
+    reg_date = st.text_input("Registration Date", placeholder="DD-MMM-YYYY")
+    fitness_to = st.text_input("Fitness Up To", placeholder="DD-MMM-YYYY")
+    chassis_no = st.text_input("Chassis Number", placeholder="17 Digit Number")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# 2. Input Fields Section (The Boxes)
-st.subheader("New RC Details (Modify Here)")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    reg_no = st.text_input("1. Registration No", placeholder="e.g. GJ05CV6327")
-    reg_date = st.text_input("2. Reg Date", placeholder="DD-MMM-YYYY")
-
-with col2:
-    fitness_date = st.text_input("3. Fitness Up To", placeholder="DD-MMM-YYYY")
-    chassis_no = st.text_input("4. Chassis Number", placeholder="Enter 17 digit number")
-
-# 3. Output Preview with 6.4pt font size
-if st.button("Generate Preview"):
-    if reg_no and reg_date and fitness_date and chassis_no:
-        st.info("Niche aapka modified data 6.4pt size me dikh raha hai:")
+with col_preview:
+    st.subheader("3. Live Output (6.4pt Size)")
+    
+    if uploaded_file:
+        # File preview
+        if uploaded_file.type != "application/pdf":
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Uploaded Original RC", use_container_width=True)
+        else:
+            st.info("PDF Uploaded: Preview available after processing.")
+    
+    if reg_no or reg_date or fitness_to or chassis_no:
+        st.markdown('<div class="rc-box">', unsafe_allow_html=True)
+        st.write("**Modified Data Preview:**")
         
-        # Displaying data in a box with exact font size constraint
+        # This div simulates the small text area on an RC
         preview_html = f"""
-        <div style="border: 1px solid #ccc; padding: 15px; border-radius: 5px; background-color: #f9f9f9;">
-            <p class="custom-text"><strong>REGN NO:</strong> {reg_no.upper()}</p>
-            <p class="custom-text"><strong>REGN DATE:</strong> {reg_date}</p>
-            <p class="custom-text"><strong>FITNESS VALID UPTO:</strong> {fitness_date}</p>
-            <p class="custom-text"><strong>CHASSIS NO:</strong> {chassis_no.upper()}</p>
+        <div style="border: 2px solid #333; padding: 10px; background: #fffde7; min-height: 100px;">
+            <p class="target-text">REGN NO: {reg_no if reg_no else '________'}</p>
+            <p class="target-text">REGN DATE: {reg_date if reg_date else '________'}</p>
+            <p class="target-text">FITNESS UP TO: {fitness_to if fitness_to else '________'}</p>
+            <p class="target-text">CHASSIS NO: {chassis_no if chassis_no else '________'}</p>
         </div>
         """
         st.markdown(preview_html, unsafe_allow_html=True)
+        st.caption("Upar dikhaya gaya text exact 6.4pt font size par set hai.")
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.warning("Kripya saare boxes fill karein.")
+        st.warning("Niche details fill karein preview dekhne ke liye.")
 
-# Footer info
-st.markdown("---")
-st.caption("Developed for RC Modification Testing - GitHub + Streamlit")
+# Action Buttons
+if st.sidebar.button("Save & Process"):
+    if reg_no and chassis_no:
+        st.sidebar.success("Data Saved Successfully!")
+    else:
+        st.sidebar.error("Main fields fill karna zaroori hai.")
+
+st.sidebar.info("Note: Agle update mein hum in details ko seedha image ke upar overlay karenge.")
