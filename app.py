@@ -3,246 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart RC Editor & Generator</title>
+    <title>RC Modification System - Gujarat Style</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .rc-card {
-            width: 500px;
-            height: 300px;
-            background: linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%);
-            border: 2px solid #3b82f6;
-            border-radius: 15px;
+        .rc-canvas-container {
             position: relative;
-            padding: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border-radius: 8px;
             overflow: hidden;
+            background: #fff;
         }
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: 60px;
-            color: rgba(59, 130, 246, 0.05);
-            pointer-events: none;
-            font-weight: bold;
-            white-space: nowrap;
+        canvas {
+            max-width: 100%;
+            height: auto;
         }
-        #preview-container {
-            display: flex;
-            justify-content: center;
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            flex-direction: column;
             align-items: center;
-            min-height: 400px;
+            justify-content: center;
+            color: white;
+            z-index: 100;
         }
-        .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="bg-slate-900 text-gray-100 min-h-screen font-sans">
 
-    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
-        
-        <!-- Left Side: Controls -->
-        <div class="w-full md:w-1/3 p-6 border-r border-gray-200">
-            <h1 class="text-2xl font-bold text-blue-600 mb-2">RC Smart Editor</h1>
-            <p class="text-sm text-gray-500 mb-6">Purani RC upload karein aur details update karein.</p>
+    <div id="loader" class="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        <p class="mt-4 text-lg">AI Processing Ho Raha Hai...</p>
+    </div>
 
-            <!-- Step 1: Upload -->
-            <div class="mb-6">
-                <label class="block text-sm font-semibold mb-2">1. Purani RC Upload Karein</label>
-                <input type="file" id="imageInput" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                <button onclick="analyzeImage()" id="analyzeBtn" class="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2">
-                    <span>Data Extract Karein</span>
-                    <div id="loader" class="loading-spinner hidden"></div>
-                </button>
-            </div>
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="mb-8 border-b border-gray-700 pb-4">
+            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                📄 RC Modification System
+            </h1>
+            <p class="text-gray-400 mt-2">Apni purani RC upload karein aur naye details enter karke output download karein.</p>
+        </header>
 
-            <hr class="my-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Side: Inputs -->
+            <div class="space-y-6 bg-slate-800 p-6 rounded-xl border border-gray-700">
+                
+                <section>
+                    <h2 class="text-xl font-semibold mb-4 text-blue-400">1. Upload Old RC</h2>
+                    <div class="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                        <div id="uploadPlaceholder">
+                            <p class="text-gray-400">Yahan click karein ya image drop karein</p>
+                            <p class="text-xs text-gray-500 mt-1">(Support: JPG, PNG)</p>
+                        </div>
+                        <img id="imagePreview" class="hidden mx-auto max-h-32 rounded">
+                    </div>
+                </section>
 
-            <!-- Step 2: Edit Details -->
-            <div class="space-y-4">
-                <label class="block text-sm font-semibold">2. Details Check/Update Karein</label>
-                <div>
-                    <label class="text-xs text-gray-400">Owner Name</label>
-                    <input type="text" id="ownerName" placeholder="Owner Name" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400">Registration Number</label>
-                    <input type="text" id="regNo" placeholder="Reg. No (e.g. DL 01 AB 1234)" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400">Vehicle Model</label>
-                    <input type="text" id="model" placeholder="Vehicle Model" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <div>
-                    <label class="text-xs text-gray-400">Chassis Number</label>
-                    <input type="text" id="chassis" placeholder="Chassis Number" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-400 outline-none">
-                </div>
-                <button onclick="updatePreview()" class="w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition">
-                    New RC Generate Karein
-                </button>
-            </div>
-        </div>
-
-        <!-- Right Side: Preview -->
-        <div class="w-full md:w-2/3 bg-gray-50 p-6 flex flex-col items-center justify-center">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Live Preview (New RC)</h2>
-            
-            <div id="preview-container">
-                <div id="rcCard" class="rc-card">
-                    <div class="watermark">TRANSPORT DEPT</div>
+                <section class="space-y-4">
+                    <h2 class="text-xl font-semibold text-blue-400">2. Enter New Details</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Registration Number</label>
+                            <input type="text" id="regNo" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="e.g. GJ05CX1234">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Owner Name</label>
+                            <input type="text" id="ownerName" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Full Name">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Chassis Number</label>
+                            <input type="text" id="chassis" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Chassis No.">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Engine Number</label>
+                            <input type="text" id="engine" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Engine No.">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Regn. Validity</label>
+                            <input type="text" id="validity" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="DD-MMM-YYYY">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Address</label>
+                            <input type="text" id="address" class="w-full bg-slate-700 border border-gray-600 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500" placeholder="Full Address">
+                        </div>
+                    </div>
                     
-                    <!-- Header -->
-                    <div class="flex justify-between items-start border-bottom border-gray-300 pb-2 mb-4">
-                        <div>
-                            <p class="text-[10px] font-bold text-blue-800">GOVERNMENT OF INDIA</p>
-                            <p class="text-[8px] text-gray-600">CERTIFICATE OF REGISTRATION</p>
-                        </div>
-                        <div class="text-right">
-                            <p id="display-regNo" class="text-sm font-bold text-red-600">MH 12 AB 0000</p>
-                        </div>
+                    <div class="pt-4 border-t border-gray-700 flex gap-4">
+                        <button onclick="extractData()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition">
+                            AI Scan (Purani Data)
+                        </button>
+                        <button onclick="drawRC()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
+                            Update RC Preview
+                        </button>
                     </div>
-
-                    <!-- Body -->
-                    <div class="grid grid-cols-2 gap-y-3 text-[11px]">
-                        <div>
-                            <p class="text-gray-400 font-medium">Owner Name</p>
-                            <p id="display-ownerName" class="font-bold text-gray-800">-----</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-medium">Vehicle Class</p>
-                            <p class="font-bold text-gray-800">LMV - MOTOR CAR</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-medium">Maker Model</p>
-                            <p id="display-model" class="font-bold text-gray-800">-----</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-medium">Chassis No.</p>
-                            <p id="display-chassis" class="font-bold text-gray-800">-----</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-medium">Fuel Type</p>
-                            <p class="font-bold text-gray-800">PETROL</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 font-medium">Validity</p>
-                            <p class="font-bold text-green-700">15 YEARS</p>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                        <div class="bg-gray-200 w-16 h-16 rounded border flex items-center justify-center text-[8px] text-gray-400">
-                            PHOTO
-                        </div>
-                        <div class="text-[8px] text-right text-gray-500">
-                            Digitally Signed by RTO Authority<br>
-                            Generated on: <span id="currentDate"></span>
-                        </div>
-                    </div>
-                </div>
+                </section>
             </div>
 
-            <button onclick="downloadRC()" class="mt-6 flex items-center gap-2 bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-black transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                </svg>
-                Save as Image
-            </button>
+            <!-- Right Side: Live Output -->
+            <div class="flex flex-col items-center">
+                <h2 class="text-xl font-semibold mb-4 text-blue-400 self-start">3. Live Output</h2>
+                <div id="canvasWrapper" class="rc-canvas-container">
+                    <canvas id="rcCanvas"></canvas>
+                </div>
+                
+                <div class="mt-6 flex gap-4">
+                    <button onclick="downloadRC()" class="bg-gray-200 hover:bg-white text-black font-bold px-8 py-3 rounded-full flex items-center gap-2 transition">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download Final RC
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
-        const apiKey = ""; // Runtime provides key
+        const apiKey = ""; // API key managed by environment
+        const canvas = document.getElementById('rcCanvas');
+        const ctx = canvas.getContext('2d');
+        let baseImage = null;
 
-        async function analyzeImage() {
-            const fileInput = document.getElementById('imageInput');
-            if (!fileInput.files[0]) {
-                alert("Pehle RC ki photo upload karein!");
+        // Photo load karne ka function
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                baseImage = new Image();
+                baseImage.onload = function() {
+                    // Set canvas size to match uploaded image
+                    canvas.width = baseImage.width;
+                    canvas.height = baseImage.height;
+                    drawRC();
+                    
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreview').classList.remove('hidden');
+                    document.getElementById('uploadPlaceholder').classList.add('hidden');
+                };
+                baseImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // AI se data nikalne ka function
+        async function extractData() {
+            if (!baseImage) {
+                alert("Pehle purani RC upload karein!");
                 return;
             }
 
             const loader = document.getElementById('loader');
-            const btn = document.getElementById('analyzeBtn');
-            loader.classList.remove('hidden');
-            btn.disabled = true;
+            loader.style.display = 'flex';
 
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64Data = reader.result.split(',')[1];
-                
-                const prompt = "Extract Registration Number, Owner Name, Vehicle Model, and Chassis Number from this Registration Certificate image. Return only as JSON with keys: regNo, ownerName, model, chassis.";
-                
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    { text: prompt },
-                                    { inlineData: { mimeType: "image/png", data: base64Data } }
-                                ]
-                            }],
-                            generationConfig: { responseMimeType: "application/json" }
-                        })
-                    });
+            const base64Data = canvas.toDataURL('image/jpeg').split(',')[1];
+            const prompt = "Is RC image se saari details nikaalo: Registration Number, Owner Name, Chassis Number, Engine Number, Validity, Address. Return JSON only.";
 
-                    const result = await response.json();
-                    const data = JSON.parse(result.candidates[0].content.parts[0].text);
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                            ]
+                        }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
 
-                    // Fill Inputs
-                    document.getElementById('ownerName').value = data.ownerName || "";
-                    document.getElementById('regNo').value = data.regNo || "";
-                    document.getElementById('model').value = data.model || "";
-                    document.getElementById('chassis').value = data.chassis || "";
+                const result = await response.json();
+                const data = JSON.parse(result.candidates[0].content.parts[0].text);
 
-                    updatePreview();
-                } catch (error) {
-                    console.error(error);
-                    alert("AI data read nahi kar paya. Aap manually fill kar sakte hain.");
-                } finally {
-                    loader.classList.add('hidden');
-                    btn.disabled = false;
-                }
-            };
-            reader.readAsDataURL(fileInput.files[0]);
+                // Fill inputs
+                document.getElementById('regNo').value = data.regNo || data.registration_number || "";
+                document.getElementById('ownerName').value = data.ownerName || data.owner_name || "";
+                document.getElementById('chassis').value = data.chassis || data.chassis_number || "";
+                document.getElementById('engine').value = data.engine || data.engine_number || "";
+                document.getElementById('validity').value = data.validity || "";
+                document.getElementById('address').value = data.address || "";
+
+                drawRC();
+            } catch (err) {
+                console.error(err);
+                alert("AI processing mein error aya. Manual fill kar sakte hain.");
+            } finally {
+                loader.style.display = 'none';
+            }
         }
 
-        function updatePreview() {
-            document.getElementById('display-ownerName').innerText = document.getElementById('ownerName').value || "-----";
-            document.getElementById('display-regNo').innerText = document.getElementById('regNo').value || "MH 12 AB 0000";
-            document.getElementById('display-model').innerText = document.getElementById('model').value || "-----";
-            document.getElementById('display-chassis').innerText = document.getElementById('chassis').value || "-----";
+        // Canvas par text chhapne ka function (Gujarat RC Positions)
+        function drawRC() {
+            if (!baseImage) return;
+
+            // Clear and Draw Original
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(baseImage, 0, 0);
+
+            // Text Settings
+            const scaleFactor = canvas.width / 1000; // Relative font size
+            ctx.font = `bold ${16 * scaleFactor}px monospace`;
+            ctx.fillStyle = "black";
+
+            // Positions (Approximate as per Gujarat RC layout)
+            const inputs = {
+                regNo: { val: document.getElementById('regNo').value, x: 160, y: 250 },
+                validity: { val: document.getElementById('validity').value, x: 380, y: 250 },
+                chassis: { val: document.getElementById('chassis').value, x: 160, y: 310 },
+                engine: { val: document.getElementById('engine').value, x: 160, y: 360 },
+                ownerName: { val: document.getElementById('ownerName').value, x: 160, y: 410 },
+                address: { val: document.getElementById('address').value, x: 160, y: 460 }
+            };
+
+            // Overlay with White Background first to "Hide" old text (optional)
+            // ctx.fillStyle = "white";
+            // ctx.fillRect(150 * scaleFactor, 230 * scaleFactor, 200 * scaleFactor, 30 * scaleFactor);
+
+            ctx.fillStyle = "black";
+            ctx.fillText(inputs.regNo.val, inputs.regNo.x * scaleFactor, inputs.regNo.y * scaleFactor);
+            ctx.fillText(inputs.validity.val, inputs.validity.x * scaleFactor, inputs.validity.y * scaleFactor);
+            ctx.fillText(inputs.chassis.val, inputs.chassis.x * scaleFactor, inputs.chassis.y * scaleFactor);
+            ctx.fillText(inputs.engine.val, inputs.engine.x * scaleFactor, inputs.engine.y * scaleFactor);
             
-            const date = new Date();
-            document.getElementById('currentDate').innerText = date.toLocaleDateString();
+            ctx.font = `bold ${14 * scaleFactor}px monospace`;
+            ctx.fillText(inputs.ownerName.val.toUpperCase(), inputs.ownerName.x * scaleFactor, inputs.ownerName.y * scaleFactor);
+            
+            // Multi-line address logic
+            ctx.font = `${12 * scaleFactor}px monospace`;
+            const addr = inputs.address.val;
+            if(addr.length > 40) {
+                ctx.fillText(addr.substring(0, 40), inputs.address.x * scaleFactor, inputs.address.y * scaleFactor);
+                ctx.fillText(addr.substring(40), inputs.address.x * scaleFactor, (inputs.address.y + 15) * scaleFactor);
+            } else {
+                ctx.fillText(addr, inputs.address.x * scaleFactor, inputs.address.y * scaleFactor);
+            }
         }
 
         function downloadRC() {
-            const element = document.getElementById('rcCard');
-            html2canvas(element, { scale: 3 }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = 'New_RC_Card.png';
-                link.href = canvas.toDataURL();
-                link.click();
-            });
+            const link = document.createElement('a');
+            link.download = 'Modified_RC_Gujarat.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         }
-
-        // Init date
-        document.getElementById('currentDate').innerText = new Date().toLocaleDateString();
     </script>
 </body>
 </html>
